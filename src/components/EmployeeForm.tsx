@@ -6,269 +6,289 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
-import { Calendar, Clock, DollarSign, Plus, Trash2 } from 'lucide-react';
-
-interface WorkReport {
-  id: string;
-  date: string;
-  jobType: string;
-  hours: number;
-  eventName: string;
-  paymentType: 'hourly' | 'event';
-  rate: number;
-  description: string;
-  total: number;
-}
-
-const jobTypes = [
-  { value: 'dj', label: 'DJ', hourlyRate: 300, eventRate: 2500 },
-  { value: 'promotor', label: 'Promotor', hourlyRate: 150, eventRate: 1200 },
-  { value: 'pinta-caritas', label: 'Pinta Caritas', hourlyRate: 200, eventRate: 800 },
-  { value: 'fotografo', label: 'Fotógrafo', hourlyRate: 400, eventRate: 3000 },
-  { value: 'animador', label: 'Animador', hourlyRate: 250, eventRate: 1500 },
-  { value: 'mesero', label: 'Mesero', hourlyRate: 120, eventRate: 600 }
-];
+import { CalendarDays, Clock, DollarSign, Briefcase, Plus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export const EmployeeForm = () => {
-  const [reports, setReports] = useState<WorkReport[]>([]);
-  const [currentReport, setCurrentReport] = useState({
-    date: '',
+  const [formData, setFormData] = useState({
+    employeeName: '',
     jobType: '',
-    hours: 0,
+    customJobType: '',
     eventName: '',
-    paymentType: 'hourly' as 'hourly' | 'event',
+    date: '',
+    startTime: '',
+    endTime: '',
+    hourlyRate: '',
     description: ''
   });
 
-  const addReport = () => {
-    if (!currentReport.date || !currentReport.jobType || !currentReport.eventName) {
+  const { toast } = useToast();
+
+  const jobTypes = [
+    'DJ',
+    'Promotor',
+    'Pinta Caritas',
+    'Fotógrafo',
+    'Animador',
+    'Mesero',
+    'Bartender',
+    'Seguridad',
+    'Otro'
+  ];
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validar campos requeridos
+    if (!formData.employeeName || !formData.eventName || !formData.date || 
+        !formData.startTime || !formData.endTime || !formData.hourlyRate) {
       toast({
-        title: "Error",
-        description: "Por favor completa todos los campos obligatorios",
-        variant: "destructive"
+        title: "Campos requeridos",
+        description: "Por favor completa todos los campos obligatorios.",
+        variant: "destructive",
       });
       return;
     }
 
-    const jobTypeData = jobTypes.find(jt => jt.value === currentReport.jobType);
-    if (!jobTypeData) return;
+    if (formData.jobType === 'Otro' && !formData.customJobType.trim()) {
+      toast({
+        title: "Especifica el tipo de trabajo",
+        description: "Por favor especifica el tipo de trabajo personalizado.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const rate = currentReport.paymentType === 'hourly' ? jobTypeData.hourlyRate : jobTypeData.eventRate;
-    const total = currentReport.paymentType === 'hourly' 
-      ? rate * currentReport.hours 
-      : rate;
+    // Calcular horas trabajadas
+    const startTime = new Date(`2000-01-01T${formData.startTime}`);
+    const endTime = new Date(`2000-01-01T${formData.endTime}`);
+    const hoursWorked = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursWorked <= 0) {
+      toast({
+        title: "Horario inválido",
+        description: "La hora de fin debe ser posterior a la hora de inicio.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const newReport: WorkReport = {
-      id: Date.now().toString(),
-      ...currentReport,
-      rate,
-      total
-    };
+    const totalEarnings = hoursWorked * parseFloat(formData.hourlyRate);
+    const finalJobType = formData.jobType === 'Otro' ? formData.customJobType : formData.jobType;
 
-    setReports([...reports, newReport]);
-    setCurrentReport({
-      date: '',
+    console.log('Reporte enviado:', {
+      ...formData,
+      jobType: finalJobType,
+      hoursWorked,
+      totalEarnings
+    });
+
+    toast({
+      title: "¡Reporte enviado exitosamente!",
+      description: `Reporte para ${formData.eventName} ha sido enviado para aprobación. Total: $${totalEarnings.toLocaleString()}`,
+    });
+
+    // Limpiar formulario
+    setFormData({
+      employeeName: '',
       jobType: '',
-      hours: 0,
+      customJobType: '',
       eventName: '',
-      paymentType: 'hourly',
+      date: '',
+      startTime: '',
+      endTime: '',
+      hourlyRate: '',
       description: ''
     });
-
-    toast({
-      title: "Trabajo agregado",
-      description: "El reporte de trabajo ha sido agregado exitosamente",
-    });
   };
-
-  const removeReport = (id: string) => {
-    setReports(reports.filter(r => r.id !== id));
-  };
-
-  const submitWeeklyReport = () => {
-    if (reports.length === 0) {
-      toast({
-        title: "Error",
-        description: "Debes agregar al menos un trabajo para enviar el reporte",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    toast({
-      title: "Reporte enviado",
-      description: `Se han enviado ${reports.length} trabajos para aprobación`,
-    });
-    
-    setReports([]);
-  };
-
-  const totalEarnings = reports.reduce((sum, report) => sum + report.total, 0);
 
   return (
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <CardTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Reportar Nuevo Trabajo
+            <Plus className="w-6 h-6" />
+            Crear Reporte de Trabajo
           </CardTitle>
           <CardDescription className="text-blue-100">
-            Completa la información del trabajo realizado
+            Completa la información de tu trabajo realizado
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Fecha del Evento</Label>
-              <Input
-                id="date"
-                type="date"
-                value={currentReport.date}
-                onChange={(e) => setCurrentReport({...currentReport, date: e.target.value})}
-                className="border-gray-300 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="jobType">Tipo de Trabajo</Label>
-              <Select 
-                value={currentReport.jobType} 
-                onValueChange={(value) => setCurrentReport({...currentReport, jobType: value})}
-              >
-                <SelectTrigger className="border-gray-300 focus:border-blue-500">
-                  <SelectValue placeholder="Selecciona el tipo de trabajo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {jobTypes.map((job) => (
-                    <SelectItem key={job.value} value={job.value}>
-                      {job.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="eventName">Nombre del Evento</Label>
-              <Input
-                id="eventName"
-                placeholder="Ej: Boda de Maria y Juan"
-                value={currentReport.eventName}
-                onChange={(e) => setCurrentReport({...currentReport, eventName: e.target.value})}
-                className="border-gray-300 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="paymentType">Tipo de Pago</Label>
-              <Select 
-                value={currentReport.paymentType} 
-                onValueChange={(value: 'hourly' | 'event') => setCurrentReport({...currentReport, paymentType: value})}
-              >
-                <SelectTrigger className="border-gray-300 focus:border-blue-500">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hourly">Por Hora</SelectItem>
-                  <SelectItem value="event">Por Evento</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {currentReport.paymentType === 'hourly' && (
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Información del empleado */}
               <div className="space-y-2">
-                <Label htmlFor="hours">Horas Trabajadas</Label>
+                <Label htmlFor="employeeName" className="text-sm font-medium text-gray-700">
+                  Nombre del Empleado *
+                </Label>
                 <Input
-                  id="hours"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={currentReport.hours}
-                  onChange={(e) => setCurrentReport({...currentReport, hours: parseFloat(e.target.value) || 0})}
-                  className="border-gray-300 focus:border-blue-500"
+                  id="employeeName"
+                  type="text"
+                  placeholder="Tu nombre completo"
+                  value={formData.employeeName}
+                  onChange={(e) => handleInputChange('employeeName', e.target.value)}
+                  className="w-full"
+                  required
                 />
               </div>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Descripción (Opcional)</Label>
-            <Textarea
-              id="description"
-              placeholder="Detalles adicionales del trabajo realizado..."
-              value={currentReport.description}
-              onChange={(e) => setCurrentReport({...currentReport, description: e.target.value})}
-              className="border-gray-300 focus:border-blue-500"
-            />
-          </div>
+              {/* Tipo de trabajo */}
+              <div className="space-y-2">
+                <Label htmlFor="jobType" className="text-sm font-medium text-gray-700">
+                  Tipo de Trabajo *
+                </Label>
+                <Select value={formData.jobType} onValueChange={(value) => handleInputChange('jobType', value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona el tipo de trabajo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="w-4 h-4" />
+                          {type}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <Button onClick={addReport} className="w-full bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Trabajo
-          </Button>
-        </CardContent>
-      </Card>
-
-      {reports.length > 0 && (
-        <Card className="shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
-            <CardTitle>Trabajos de Esta Semana</CardTitle>
-            <CardDescription className="text-green-100">
-              {reports.length} trabajo{reports.length !== 1 ? 's' : ''} reportado{reports.length !== 1 ? 's' : ''}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {reports.map((report) => (
-                <div key={report.id} className="bg-gray-50 p-4 rounded-lg border">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary">{jobTypes.find(jt => jt.value === report.jobType)?.label}</Badge>
-                        <Badge variant={report.paymentType === 'hourly' ? 'default' : 'outline'}>
-                          {report.paymentType === 'hourly' ? 'Por Hora' : 'Por Evento'}
-                        </Badge>
-                      </div>
-                      <h4 className="font-medium text-gray-900">{report.eventName}</h4>
-                      <p className="text-sm text-gray-600">
-                        {report.date} • {report.paymentType === 'hourly' ? `${report.hours} horas` : 'Evento completo'}
-                      </p>
-                      {report.description && (
-                        <p className="text-sm text-gray-500 mt-1">{report.description}</p>
-                      )}
-                    </div>
-                    <div className="text-right ml-4">
-                      <div className="text-lg font-bold text-green-600">${report.total.toLocaleString()}</div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeReport(report.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+              {/* Campo personalizado para "Otro" */}
+              {formData.jobType === 'Otro' && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="customJobType" className="text-sm font-medium text-gray-700">
+                    Especifica el tipo de trabajo *
+                  </Label>
+                  <Input
+                    id="customJobType"
+                    type="text"
+                    placeholder="Describe el tipo de trabajo específico"
+                    value={formData.customJobType}
+                    onChange={(e) => handleInputChange('customJobType', e.target.value)}
+                    className="w-full"
+                    required
+                  />
                 </div>
-              ))}
+              )}
+
+              {/* Nombre del evento */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="eventName" className="text-sm font-medium text-gray-700">
+                  Nombre del Evento *
+                </Label>
+                <Input
+                  id="eventName"
+                  type="text"
+                  placeholder="Ej: Fiesta Corporativa ABC, Cumpleaños de Juan"
+                  value={formData.eventName}
+                  onChange={(e) => handleInputChange('eventName', e.target.value)}
+                  className="w-full"
+                  required
+                />
+              </div>
+
+              {/* Fecha */}
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-sm font-medium text-gray-700">
+                  <CalendarDays className="w-4 h-4 inline mr-1" />
+                  Fecha del Evento *
+                </Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  className="w-full"
+                  required
+                />
+              </div>
+
+              {/* Tarifa por hora */}
+              <div className="space-y-2">
+                <Label htmlFor="hourlyRate" className="text-sm font-medium text-gray-700">
+                  <DollarSign className="w-4 h-4 inline mr-1" />
+                  Tarifa por Hora *
+                </Label>
+                <Input
+                  id="hourlyRate"
+                  type="number"
+                  placeholder="150"
+                  min="0"
+                  step="0.01"
+                  value={formData.hourlyRate}
+                  onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
+                  className="w-full"
+                  required
+                />
+              </div>
+
+              {/* Hora de inicio */}
+              <div className="space-y-2">
+                <Label htmlFor="startTime" className="text-sm font-medium text-gray-700">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Hora de Inicio *
+                </Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={formData.startTime}
+                  onChange={(e) => handleInputChange('startTime', e.target.value)}
+                  className="w-full"
+                  required
+                />
+              </div>
+
+              {/* Hora de fin */}
+              <div className="space-y-2">
+                <Label htmlFor="endTime" className="text-sm font-medium text-gray-700">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Hora de Fin *
+                </Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(e) => handleInputChange('endTime', e.target.value)}
+                  className="w-full"
+                  required
+                />
+              </div>
+
+              {/* Descripción del trabajo */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                  Descripción del Trabajo (Opcional)
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe brevemente las actividades realizadas..."
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  className="w-full"
+                  rows={3}
+                />
+              </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-medium">Total de la Semana:</span>
-                <span className="text-2xl font-bold text-green-600">${totalEarnings.toLocaleString()}</span>
-              </div>
-              <Button onClick={submitWeeklyReport} className="w-full bg-green-600 hover:bg-green-700">
-                <DollarSign className="w-4 h-4 mr-2" />
-                Enviar Reporte Semanal
+            {/* Botón de envío */}
+            <div className="flex justify-end pt-4">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2">
+                <Plus className="w-4 h-4 mr-2" />
+                Enviar Reporte
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,16 +1,37 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Users, DollarSign, Clock, Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Users, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { SupervisorDashboard } from '@/components/SupervisorDashboard';
 import { WeeklyReports } from '@/components/WeeklyReports';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Header } from '@/components/Header';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
+  const { user, profile, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("employee");
+
+  // Redirigir a auth si no está autenticado
+  if (!loading && !user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Mostrar loading mientras se carga la autenticación
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Datos simulados para la demo
   const weeklyStats = {
@@ -20,13 +41,29 @@ const Index = () => {
     hoursWorked: 156
   };
 
+  // Determinar qué pestañas mostrar según el rol
+  const showSupervisor = profile?.role === 'admin';
+  const showReports = profile?.role === 'admin';
+
+  // Ajustar la pestaña activa si el usuario no tiene permisos
+  useEffect(() => {
+    if (activeTab === 'supervisor' && !showSupervisor) {
+      setActiveTab('employee');
+    }
+    if (activeTab === 'reports' && !showReports) {
+      setActiveTab('employee');
+    }
+  }, [activeTab, showSupervisor, showReports]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Header />
+      
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Sistema de Nómina Variable
-          </h1>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Bienvenido, {profile?.role === 'admin' ? 'Administrador' : 'Empleado'}
+          </h2>
           <p className="text-xl text-gray-600">
             Gestión eficiente de reportes para trabajadores de eventos
           </p>
@@ -89,7 +126,7 @@ const Index = () => {
 
         {/* Pestañas principales */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto bg-white shadow-md">
+          <TabsList className={`grid w-full ${showSupervisor && showReports ? 'grid-cols-3' : showSupervisor || showReports ? 'grid-cols-2' : 'grid-cols-1'} lg:w-auto bg-white shadow-md`}>
             <TabsTrigger 
               value="employee" 
               className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
@@ -97,33 +134,47 @@ const Index = () => {
               <Users className="w-4 h-4 mr-2" />
               Empleado
             </TabsTrigger>
-            <TabsTrigger 
-              value="supervisor"
-              className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Supervisor
-            </TabsTrigger>
-            <TabsTrigger 
-              value="reports"
-              className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Reportes
-            </TabsTrigger>
+            
+            {showSupervisor && (
+              <TabsTrigger 
+                value="supervisor"
+                className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Supervisor
+              </TabsTrigger>
+            )}
+            
+            {showReports && (
+              <TabsTrigger 
+                value="reports"
+                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Reportes
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="employee" className="space-y-6">
             <EmployeeForm />
           </TabsContent>
 
-          <TabsContent value="supervisor" className="space-y-6">
-            <SupervisorDashboard />
-          </TabsContent>
+          {showSupervisor && (
+            <TabsContent value="supervisor" className="space-y-6">
+              <ProtectedRoute requireAdmin>
+                <SupervisorDashboard />
+              </ProtectedRoute>
+            </TabsContent>
+          )}
 
-          <TabsContent value="reports" className="space-y-6">
-            <WeeklyReports />
-          </TabsContent>
+          {showReports && (
+            <TabsContent value="reports" className="space-y-6">
+              <ProtectedRoute requireAdmin>
+                <WeeklyReports />
+              </ProtectedRoute>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
