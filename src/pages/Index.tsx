@@ -16,6 +16,13 @@ const Index = () => {
   const { user, profile, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("employee");
 
+  // Debug: Log profile information
+  useEffect(() => {
+    console.log('Profile state in Index:', profile);
+    console.log('User state in Index:', user);
+    console.log('Loading state in Index:', loading);
+  }, [profile, user, loading]);
+
   // Redirigir a auth si no está autenticado
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
@@ -42,8 +49,11 @@ const Index = () => {
   };
 
   // Determinar qué pestañas mostrar según el rol
-  const showSupervisor = profile?.role === 'admin';
-  const showReports = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin';
+  const showSupervisor = isAdmin;
+  const showReports = isAdmin;
+
+  console.log('Tab visibility - isAdmin:', isAdmin, 'showSupervisor:', showSupervisor, 'showReports:', showReports);
 
   // Ajustar la pestaña activa si el usuario no tiene permisos
   useEffect(() => {
@@ -62,11 +72,15 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Bienvenido, {profile?.role === 'admin' ? 'Administrador' : 'Empleado'}
+            Bienvenido, {isAdmin ? 'Administrador' : 'Empleado'}
           </h2>
           <p className="text-xl text-gray-600">
             Gestión eficiente de reportes para trabajadores de eventos
           </p>
+          {/* Debug info - temporary */}
+          <div className="mt-2 text-sm text-gray-500">
+            Rol actual: {profile?.role || 'No definido'} | Es Admin: {isAdmin ? 'Sí' : 'No'}
+          </div>
         </div>
 
         {/* Estadísticas rápidas */}
