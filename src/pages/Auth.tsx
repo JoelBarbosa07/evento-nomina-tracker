@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,26 +14,37 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirigir a home si ya está autenticado
+  useEffect(() => {
+    if (user) {
+      console.log('User already authenticated, redirecting to home');
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('Sign in form submitted for:', email);
 
     try {
       const { error } = await signIn(email, password);
       
       if (error) {
+        console.error('Sign in error:', error);
         toast({
           title: "Error de inicio de sesión",
-          description: error.message,
+          description: error.message || "Error desconocido",
           variant: "destructive",
         });
         return;
       }
 
+      console.log('Sign in successful');
       toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente.",
@@ -41,7 +52,7 @@ const Auth = () => {
       
       navigate('/');
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('Unexpected sign in error:', error);
       toast({
         title: "Error",
         description: "Ocurrió un error inesperado",
@@ -55,25 +66,28 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('Sign up form submitted for:', email);
 
     try {
       const { error } = await signUp(email, password);
       
       if (error) {
+        console.error('Sign up error:', error);
         toast({
           title: "Error de registro",
-          description: error.message,
+          description: error.message || "Error desconocido",
           variant: "destructive",
         });
         return;
       }
 
+      console.log('Sign up successful');
       toast({
         title: "¡Registro exitoso!",
         description: "Verifica tu correo electrónico para completar el registro.",
       });
     } catch (error) {
-      console.error('Sign up error:', error);
+      console.error('Unexpected sign up error:', error);
       toast({
         title: "Error",
         description: "Ocurrió un error inesperado",
@@ -82,6 +96,11 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fillAdminCredentials = () => {
+    setEmail('admin@example.com');
+    setPassword('123456');
   };
 
   return (
@@ -147,6 +166,14 @@ const Auth = () => {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
                   </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={fillAdminCredentials}
+                  >
+                    Usar credenciales de admin
+                  </Button>
                 </form>
               </CardContent>
             </TabsContent>
@@ -192,7 +219,10 @@ const Auth = () => {
         </Card>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Para probar como administrador, usa: admin@example.com</p>
+          <p>Para probar como administrador:</p>
+          <p className="font-mono bg-gray-100 p-2 rounded mt-2">
+            admin@example.com / 123456
+          </p>
         </div>
       </div>
     </div>
