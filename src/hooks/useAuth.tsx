@@ -39,12 +39,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
-          // Cargar perfil del usuario
+        if (session?.user && event === 'SIGNED_IN') {
+          // Cargar perfil del usuario después de sign in
+          console.log('User signed in, loading profile...');
           setTimeout(async () => {
             await loadUserProfile(session.user.id);
-          }, 0);
-        } else {
+          }, 100);
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out, clearing profile...');
           setProfile(null);
         }
         
@@ -77,10 +79,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('Error loading profile:', error);
+        
+        // Si el perfil no existe, intentar crearlo
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, this might be a new user');
+          // El trigger handle_new_user debería haber creado el perfil
+          // Esperamos un poco y reintentamos
+          setTimeout(() => {
+            loadUserProfile(userId);
+          }, 1000);
+        }
         return;
       }
 
-      console.log('Profile loaded:', data);
+      console.log('Profile loaded successfully:', data);
       
       // Asegurar que el rol sea del tipo correcto
       const profileData: Profile = {
@@ -104,7 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
       });
       
-      console.log('Sign in result:', { data: data?.user?.email, error });
+      console.log('Sign in result:', { user: data?.user?.email, error });
       return { error };
     } catch (err) {
       console.error('Sign in error:', err);
