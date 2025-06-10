@@ -3,7 +3,7 @@
 
 ## Requisitos
 - PostgreSQL 12 o superior
-- Node.js 16 o superior
+- Backend de Node.js con Express (separado del frontend)
 
 ## Configuración
 
@@ -29,17 +29,28 @@
    psql -U postgres -d evento_nomina_db -f database/schema.sql
    ```
 
-4. **Configurar variables de entorno**
-   - Copia `.env.example` a `.env`
-   - Actualiza las variables con tus credenciales de PostgreSQL:
+4. **Configurar el backend**
+   - Este frontend requiere un backend separado en Node.js
+   - El backend debe implementar las rutas de autenticación:
+     - POST /auth/signup
+     - POST /auth/signin  
+     - GET /auth/verify
+   - Configura las variables de entorno en el backend:
    ```
-   VITE_DB_HOST=localhost
-   VITE_DB_PORT=5432
-   VITE_DB_NAME=evento_nomina_db
-   VITE_DB_USER=postgres
-   VITE_DB_PASSWORD=tu_password_aqui
-   VITE_DB_SSL=false
-   VITE_JWT_SECRET=tu_clave_secreta_jwt_aqui
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=evento_nomina_db
+   DB_USER=postgres
+   DB_PASSWORD=tu_password_aqui
+   DB_SSL=false
+   JWT_SECRET=tu_clave_secreta_jwt_aqui
+   ```
+
+5. **Configurar variables de entorno del frontend**
+   - Copia `.env.example` a `.env`
+   - Actualiza la URL del backend:
+   ```
+   VITE_API_URL=http://localhost:3001
    ```
 
 ## Usuario por defecto
@@ -72,3 +83,9 @@ SELECT * FROM profiles;
 ```sql
 UPDATE users SET password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi' WHERE email = 'admin@example.com';
 ```
+
+## Notas importantes
+- Este frontend no incluye el backend
+- Necesitarás crear un servidor Express separado que maneje las rutas de autenticación
+- El backend debe usar las dependencias bcryptjs, jsonwebtoken y pg
+- Las dependencias de Node.js no pueden ejecutarse en el frontend
