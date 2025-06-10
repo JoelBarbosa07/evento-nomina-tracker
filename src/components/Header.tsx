@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/usePostgresAuth';
 import { LogOut, User, Shield } from 'lucide-react';
 
 export const Header = () => {

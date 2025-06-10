@@ -10,7 +10,7 @@ import { SupervisorDashboard } from '@/components/SupervisorDashboard';
 import { WeeklyReports } from '@/components/WeeklyReports';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/usePostgresAuth';
 
 const Index = () => {
   const { user, profile, loading } = useAuth();

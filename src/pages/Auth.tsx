@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/usePostgresAuth';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, UserPlus, Briefcase } from 'lucide-react';
@@ -32,18 +32,8 @@ const Auth = () => {
     console.log('Sign in form submitted for:', email);
 
     try {
-      const { error } = await signIn(email, password);
+      await signIn(email, password);
       
-      if (error) {
-        console.error('Sign in error:', error);
-        toast({
-          title: "Error de inicio de sesión",
-          description: error.message || "Error desconocido",
-          variant: "destructive",
-        });
-        return;
-      }
-
       console.log('Sign in successful');
       toast({
         title: "¡Bienvenido!",
@@ -51,11 +41,11 @@ const Auth = () => {
       });
       
       navigate('/');
-    } catch (error) {
-      console.error('Unexpected sign in error:', error);
+    } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({
-        title: "Error",
-        description: "Ocurrió un error inesperado",
+        title: "Error de inicio de sesión",
+        description: error.message || "Error desconocido",
         variant: "destructive",
       });
     } finally {
@@ -69,28 +59,20 @@ const Auth = () => {
     console.log('Sign up form submitted for:', email);
 
     try {
-      const { error } = await signUp(email, password);
+      await signUp(email, password);
       
-      if (error) {
-        console.error('Sign up error:', error);
-        toast({
-          title: "Error de registro",
-          description: error.message || "Error desconocido",
-          variant: "destructive",
-        });
-        return;
-      }
-
       console.log('Sign up successful');
       toast({
         title: "¡Registro exitoso!",
-        description: "Verifica tu correo electrónico para completar el registro.",
+        description: "Has creado tu cuenta correctamente.",
       });
-    } catch (error) {
-      console.error('Unexpected sign up error:', error);
+
+      navigate('/');
+    } catch (error: any) {
+      console.error('Sign up error:', error);
       toast({
-        title: "Error",
-        description: "Ocurrió un error inesperado",
+        title: "Error de registro",
+        description: error.message || "Error desconocido",
         variant: "destructive",
       });
     } finally {
@@ -100,7 +82,7 @@ const Auth = () => {
 
   const fillAdminCredentials = () => {
     setEmail('admin@example.com');
-    setPassword('123456');
+    setPassword('password');
   };
 
   return (
@@ -221,7 +203,7 @@ const Auth = () => {
         <div className="mt-6 text-center text-sm text-gray-600">
           <p>Para probar como administrador:</p>
           <p className="font-mono bg-gray-100 p-2 rounded mt-2">
-            admin@example.com / 123456
+            admin@example.com / password
           </p>
         </div>
       </div>
